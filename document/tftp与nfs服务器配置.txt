@@ -1,0 +1,50 @@
+一，交叉开发
+宿主机：通过网络，串口，JTAG
+目标机：运行嵌入式软件的机器
+1.网络下载
+1.1.tftp服务器安装
+sudo apt-get install tftpd-hpa（是服务器端）
+sudo apt-get install tftp-hpa（如果不需要客户端可以不安装）
+2.配置TFTP服务器
+sudo vim /etc/default/tftpd-hpa
+将原来的内容改为:
+TFTP_USERNAME="tftp"
+TFTP_ADDRESS="0.0.0.0:69"
+TFTP_DIRECTORY="tftp根目录" #服务器目录,需要设置权限为777,chomd 777
+TFTP_OPTIONS="-l -c -s"
+
+3.重新启动TFTP服务
+sudo service tftpd-hpa restart
+
+4.关闭安全相关的权限
+$sudo ufw disable			//关闭防火墙
+
+SELinux 宽容模式(permissive) 强制模式(enforcing) 关闭(disabled) 几种模式之间的转换 
+$setenforce permissive		//SELinux 宽容模式(permissive)，否则tftp不可用
+可能需要先安装selinux-utils
+$sudo apt install selinux-utils
+
+
+二、NFS服务器
+1.配置NFS服务器
+$sudo apt-get install nfs-kernel-server 安装nfs。
+$sudo mkdir /home/myroot/nfs 建立nfs共享文件夹。
+$sudo vim /etc/exports 配置nfs。
+在文档的最后一行加入
+/home/myroot/nfs *(rw,sync,no_root_squash,no_subtree_check)，保存退出。
+
+2.启动NFS服务器
+$sudo /etc/init.d/nfs restart
+$sudo /etc/init.d/rpcbind restart 重启rpcbind
+$sudo /etc/init.d/nfs-kernel-server restart 重启nfs
+
+3.在目标机中挂载服务器的共享文件夹
+$sudo mount -t nfs 192.168.1.xxx:/home/myroot/nfs 
+把以上指令写到/etc/rc.local 当中可实现开机自动挂载
+
+
+
+
+
+
+

@@ -1,0 +1,145 @@
+一、Linux体系结构
+1.Linux系统是如何构成的？
+由用户空间和内核空间构成：
+用户空间：包括用户应用程序，GNU C Library(glibc)，系统配置文件等等
+内核空间：包括系统调用接口，狭义上的内核，内核架构代码，架构代码
+
+2.linux内核架构
+*************************************************************
+*				System Call Interface(SCI)					*
+*************************************************************
+*	Process Managment(PM)	**	Virtual File System(VFS)	*
+*************************************************************
+*	Memory  Managment(MM)	**	Metwork Stack				*
+*************************************************************
+*	ARCH					**	Device Drivers(DD)			*
+*************************************************************
+①：System Call Interface(SCI):系统调用接口，如read，write，open
+②：Process Managment(PM)：进程管理模块，如进程的创建，进程的删除，进程调度
+③：Memory  Managment(MM)：内存关闭模块，内存的分配，内存回收等
+④：ARCH：架构相关的代码，或者说和CPU密切相关的代码
+⑤：Virtual File System(VFS)：虚拟文件系统
+⑥：Metwork Stack：网络协议栈，主要负责网络协议	
+⑦：Device Drivers(DD)：设备驱动
+
+二、Linux内核原始代码
+www.kernel.org
+三、Linux内核配置与编译
+1.Linux内核配置
+基于硬件和软件的需求，选出需要的，去掉不要的。
+内核配置的方法：
+make config:基于文本模式的交互式配置
+make menuconfig:基于文本模式的菜单型配置
+菜单项的意思：
+1) make menuconfig //在内核顶层执行make menuconfig
+    General setup  --->                                                       
+       [*] Enable loadable module support  --->                                    
+       [*] Enable the block layer  --->                                              
+           Processor type and features  --->   //首先配置处理类型和特征                                     
+           Power management and ACPI options  --->                                   
+           Bus options (PCI etc.)  --->                                             
+           Executable file formats / Emulations  --->                                
+       -*- Networking support  --->                                                   
+           Device Drivers  --->                                                        
+           Firmware Drivers  --->                                                      
+           File systems  --->                                                        
+           Kernel hacking  --->                                                      
+           Security options  --->                                                      
+       -*- Cryptographic API  --->                                                    
+       [*] Virtualization  --->                                                        
+           Library routines  --->                                                      
+       ---                                                                            
+           Load an Alternate Configuration File                                      
+           Save an Alternate Configuration File
+通过上下键移动，选中select，enter进入选择
+①： Processor type and features  --->   //首先配置处理类型和特征
+②： -*- Networking support  ---> 		//肯能会进行网络协议的配置
+③：Device Drivers  --->  
+④：File systems  --->  
+<*>	：选择	对应的.config中值为CONFIG_xxx=y
+比如有A，B，C三个功能
+功能：	对应C文件	对应目标文件	最终链接文件
+A		A.c			A.o
+B		B.c			B.o				最终所有选择为<*>功能的*.o会被合并为zImage内核影像文件
+C		C.c			C.o
+<M>	：选择，模块 对应的.config中值为CONFIG_xxx=m
+功能：	对应C文件	对应目标文件	最终链接文件
+D		D.c			D.o
+E		E.c			E.o				最终所有选择为<M>功能的*.o会被放到某个文件夹，假如是PC机，会被安装到硬盘，动态加载和删除
+F		F.c			F.o
+<>	：不选择 对应的.config中值为CONFIG_xxx=y
+[*]
+[]
+-*-
+
+2.Linux内核编译
+2.1 编译内核(x86)
+make zImage
+make bzImage
+区别：在x86平台，zImage只能用小于512K的内核
+如需获取详细编译信息，可使用：
+make zImage V=1
+make bzImage V=1
+编译好的内核位于arch/<cpu>/boot/目录下
+2.2 编译内核模块
+make modules
+make modules_install
+2.2.1 编译内核模块
+2.2.2 将编译好的内核模块，从内核源代码目录复制至/lib/modules下，为打包做好准备
+
+2.3 制作init ramdisk
+方法：mkinitrd initrd-$version(打包的文件名，自己起的) $version（打包的目录，不能随便起）
+例：mkinitrd initrd-2.6.39 2.6.39
+$version可以通过查询/lib/modules下的目录得到
+2.3.1 将编译好的内核镜像和内核模块拷贝到/boot/目录下
+cp linux-2.6.39/arch/x86/boot/bzImage /boot/vmlinuz-2.6.39
+cp rd-2.6.39 /boot/
+修改启动配置文件
+$sudo vim /etc/groub.conf
+
+2.4 编译内核(arm)
+2.4.1 清理内核
+make distclean
+2.4.2 配置内核
+make menuconfig ARCH=arm	//默认是运行在x86平台上的
+2.4.3 编译内核
+make uImage ARCH=arm CROSS_COMPILE=arm-linux-
+ 
+在编译嵌入式Linux内核时出现了以下错误提示：
+TIMEC   kernel/timeconst.h
+Can't use 'defined(@array)' (Maybe you should just omit the defined()?) at kernel/timeconst.pl line 373.
+/home/myroot/tmp/linux/kernel/Makefile:138: recipe for target 'kernel/timeconst.h' failed
+起初一头雾水，仔细看了错误提示后删掉了kernel/timeconst.pl 文件中 373行的
+
+if (!defined(@val)) {
+改为if (!@val) {
+
+后，编译成功。
+
+编译内核提示mkimage command not found – U-Boot images will not be built
+将uboot编译好的uboot/tools/mkimage文件拷贝到/bin/
+$cp uboot/tools/mkimage /bin/
+$chmod 777 /bin/mkimage
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

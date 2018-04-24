@@ -1,15 +1,15 @@
 一，arm-linux- 环境搭建
-1，下载arm-linux-gcc-4.3.2.tgz并且解压到系统中，本目录中提供在ARM-tools目录下
+1.下载arm-linux-gcc-4.3.2.tgz并且解压到系统中，本目录中提供在ARM-tools目录下
 $tar zxvf arm-linux-gcc-4.3.2.tgz -C /   //解压到根目录,如：/usr/local/arm/4.3.2/bin
 注意：针对64位系统还需要安装lib32ncurses5 lib32z1组件
 $sudo apt-get install lib32ncurses5 lib32z1
-2，然后设置环境变量
+2.设置环境变量
 $sudo vim /home/myroot/.bashrc
 在最后添加一行
 $export PATH=$PATH:/usr/local/arm/4.3.2/bin
 
 二，安装辅助软件
-1，系统安装辅助软件-->dd命令(linux环境通用)/windows烧写软件-->SD卡
+1.系统安装辅助软件-->dd命令(linux环境通用)/windows烧写软件-->SD卡
 dd:进行文件复制，在复制的同时，可以进行格式转换
 例：dd iflag=dsync oflag=dsync if=xxx.bin of=/dev/sdb seek=1
 dd：命令名
@@ -19,12 +19,23 @@ if=xxx.bin:要复制的文件名
 of=/dev/sdb:文件被复制到设备，/dev/sdb表示sdka
 seek=1：sd卡的第一个扇区
 
-2，复制相关软件u-boot_TQ210.bin
+2.复制相关软件u-boot_TQ210.bin
 针对TQ210，我将u-boot_TQ210.bin文档放在TQ210/uboot/uboot-img路劲下
 
-3，将u-boot_TQ210.bin烧写到SD卡
+3.将u-boot_TQ210.bin烧写到SD卡
 $sudo dd iflag=sync oflag=dsync if=TQ210/uboot/uboot-img/u-boot_TQ210.bin of=/dev/sdb1 seek=1
 注意：of=/dev/sdb1根据使用sudo fdisk -l查出来的实际设备为准
 
-4，启动uboot
+4.启动uboot
 将制作好的SD卡插入TQ210开发板，打开串口控制终端，按住空格键，上电启动即可。
+
+三，U-Boot使用方法
+1. 配置U-Boot 
+TQ210:	make TQ210_config
+2.编译U-Boot 
+TQ210:	make ARCH=arm CROSS_COMPILE=arm-linux-
+
+四，tftp下载运行
+TQ210:    tftp 0xc0008000 uImage
+
+

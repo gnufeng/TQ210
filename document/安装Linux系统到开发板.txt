@@ -1,0 +1,7 @@
+一、210系统安装步骤
+1.利用制作好的SD卡启动开发板
+2.打开secureCRT串口，按住空格键，启动uboot进入启动菜单
+3.格式化Nand Flash
+选择[9] Format the Nand Flash
+4.下载bootloader
+选择[1] Download bootloader (u-boot or bootimage) to Nand Flash
