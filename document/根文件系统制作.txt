@@ -1,0 +1,115 @@
+步骤：
+一、建立根文件系统目录与文件
+1.1 创建目录
+#mkdir rootfs
+#cd rootfs
+#mkdir bin dev etc lib proc sbin sys usr mnt tmp var
+#mkdir usr/bin usr/lib usr/sbin lib/modules
+ 
+1.2 创建设备文件
+#cd rootfs/dev
+#mknod -m 666 console c 5 1 //-m 666：设备属性 console：控制台 c：字符设备 5：主设备号 1：次设备号
+#mknod -m 666 null c 1 3
+
+1.3 加入配置文件
+#tar etc.tar.gz
+#mv etc/* ../rootfs/etc/ -rf
+
+1.4 添加内核模块
+#cd ../kernel/linux
+#make modules ARCH=arm CROSS_COMPILE=arm-linux-
+#make modules_install ARCH=arm INSTALL_MOD_PATH=../../rootfs
+
+1.5 编译/安装busybox
+Busybox: 嵌入式开发中的瑞士军刀
+1.5.1 配置busybox 
+#make menuconfig 
+报错：
+myroot@myroot:~/TQ210/packages/busybox-1.13.3$ make menuconfig
+Makefile:421: *** mixed implicit and normal rules: deprecated syntax
+Makefile:1269: *** mixed implicit and normal rules: deprecated syntax
+make: *** No rule to make target 'menuconfig'.  Stop.
+解决：
+用vim打开Makefile，迅速定位到416和1449行。
+今天在编译uImage的时候，执行make命令，报错，错误信息：416 "mixed implicit and normal rules"，
+翻译为中文：混合的和隐含普通规则。起初以为是内核包的问题，从官网上下载了低版本，报同样的错误，
+google后发 现，是由于我的系统的make工具太新，make的旧版规则已经无法兼容新版。按照以下方式，问题得到解决：
+
+在makefile中将421行代码
+config %config: scripts_basic outputmakefile FORCE
+改为
+%config: scripts_basic outputmakefile FORCE
+
+在makefile中将1269行代码
+/ %/: prepare scripts FORCE
+改为
+%/: prepare scripts FORCE
+
+之后再次 
+#make menuconfig
+
+Busybox Settings---> Build Options--->
+*选中 "Build busybox as astatic binary", 静态链接
+*Cross Compiler prefix (arm-linux-)
+
+Installation Options->
+*选中 "Don't use /usr", 选中该项可以避免busybox被安装到宿主系统的/usr目录下，破坏宿主系统
+
+Busybox Installation Prefix(/xxx/rootfs)
+该选项表明编译后的busybox的安装位置
+
+1.5.2 编译、安装busybox
+#cd busybox
+#make
+#make install
+注意：make install的时候一定要给rootfs目录下子目录加上权限，不然会一直报错
+
+
+二、挂载根文件系统到内核
+2.1 挂载方式简介
+	根据存储设备的硬件特性、系统需求,不同的文件系统类型有不同的应用场合。在嵌入式
+Linux应用中，主要的存储设备为 RAM 和FLASH，常用的基于存储设备的文件系统类
+型包括：jffs2, yaffs2, ubifs, ramdisk等
+2.1.1 基于NandFlash的文件系统有：Yaffs2 UbiFS(RW)
+2.1.2 基于NorFlash的文件系统有：Jffs2(RW)
+2.1.3 基于内存的文件系统：Ramdisk(早期) Initramfs(目前在用。启动速度快，掉电不保存)
+2.1.4 基于网络的文件系统: NFS(开发阶段常用)
+
+2.2 initramfs挂载
+2.2.1 创建软连接
+#cd …/rootfs/
+#ln –s./bin/busybox init
+2.2.2 配置Linux内核，支持initramfs
+make menuconfig
+    General setup  ---> 回车进入
+	[*] Initial RAM filesystem and RAM disk (initramfs/initrd) support 
+	()    Initramfs source file(s)  //输入/home/myroot/TQ210/rootfs
+保存配置重新编译内核
+	
+2.2.3 编译内核
+make uImage ARCH=arm CROSS_COMPILE=arm-linux-
+可见编译好的uImage在如下目录
+UIMAGE  arch/arm/boot/uImage
+将支持initramfs的uImage拷贝到rootfs目录下
+
+2.2.4 环境变量设置
+setenv bootargs noinitrd console=ttySAC0,115200
+
+2.3 NFS挂载
+setenv bootargs noinitrd
+console=ttySAC0,115200 init=/init 
+root=/dev/nfs rw
+nfsroot=192.168.1.3:/home/S5-
+driver/lesson9/rootfs,proto=tcp,nfsvers=3
+ip=192.168.1.6:192.168.1.3:192.168.1.1:25
+5.255.255.0::eth0:off
+
+
+
+
+
+
+
+
+
+

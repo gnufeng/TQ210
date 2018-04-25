@@ -1,0 +1,12 @@
+# Aliases extracted from modules themselves.
+alias cipher_null crypto_null
+alias digest_null crypto_null
+alias compress_null crypto_null
+alias rfc3686 ctr
+alias rfc4543 gcm
+alias rfc4106 gcm
+alias gcm_base gcm
+alias rfc4309 ccm
+alias ccm_base ccm
+alias stdrng ansi_cprng
+alias ghash ghash_generic

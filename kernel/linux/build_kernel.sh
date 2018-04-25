@@ -1,0 +1,1 @@
+make uImage ARCH=arm CROSS_COMPILE=arm-linux-
