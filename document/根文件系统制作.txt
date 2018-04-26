@@ -96,13 +96,56 @@ UIMAGE  arch/arm/boot/uImage
 setenv bootargs noinitrd console=ttySAC0,115200
 
 2.3 NFS挂载
-setenv bootargs noinitrd
-console=ttySAC0,115200 init=/init 
-root=/dev/nfs rw
-nfsroot=192.168.1.3:/home/S5-
-driver/lesson9/rootfs,proto=tcp,nfsvers=3
-ip=192.168.1.6:192.168.1.3:192.168.1.1:25
-5.255.255.0::eth0:off
+2.3.1 为什么要用NFS？
+①：如果要往开发板放入一个文件，如果用initramfs，需要重新在rootfs目录中创建，然后在重新配置内核，
+支持initramfs文件系统挂载，在编译内核，比较麻烦。
+例：往开发板放一个testfile文件。
+1)#cd ../rootfs/
+2)#touch testfile
+3)#cd ../kernel/linux
+4)编译内核
+#make ARCH=arm CROSS_COMPILE=arm-linux-
+为什么要重新编译内核？
+因为initramfs编译出来的uImage由两个部分构成：
+(1)：一部分是真正的内核，就是由内核代码编译出来的文件
+(2)：另一部分是压缩我们自己创建的rootfs目录下的文件系统，然后贴在真正的内核后形成uImage文件，
+内核运行之后解压出来。
+
+2.3.2 所以在开发阶段采用NFS，步骤如下：
+1)配置内核，支持NFS挂载
+# make menuconfig ARCH=arm  
+2)取消之前配置initramfs的配置,打掉*，然后退出
+[*] Initial RAM filesystem and RAM disk (initramfs/initrd) support 
+3)进入File systems
+File systems  --->  
+4)找到Network File Systems，选中然后进入
+[*] Network File Systems  ---> 
+5)找到Root file system on NFS，选中
+[*]     Root file system on NFS 退出
+6)重新编译内核
+#make ARCH=arm CROSS_COMPILE=arm-linux-
+
+2.3.3 使用NFS，配置启动参数，这些值都是赋给bootargs的
+setenv bootargs noinitrd console=ttySAC0,115200 init=/init root=/dev/nfs rw nfsroot=192.168.1.3:/home/myroot/TQ210/rootfs ip=192.168.1.6:192.168.1.3:192.168.1.1:255.255.255.0::eth0:off
+
+配置参数意思解释：
+bootargs：uboot通过bootargs告诉内核启动方式。其中需要注意的几个项：
+console=ttySAC0,115200：表示用串口0做控制台
+root=/dev/nfs rw：表示使用dev下的nfs做根文件系统 rw：权限可读可写
+nfsroot=192.168.1.3:nfsroot表示nfs服务器地址，例如linux ip地址
+/home/myroot/TQ210/rootfs：表示输出的路径
+ip=192.168.1.6:192.168.1.3:192.168.1.1:255.255.255.0::eth0:off
+192.168.1.6：表示开发板启动之后的IP地址
+192.168.1.3：表示服务器的地址，本处指linux的地址
+192.168.1.1：网关的地址
+255.255.255.0：掩码，掩码后的::之间还可以给开发板起一个主机名
+eth0：表示启动之后要把ip地址赋值给eth0网卡
+off：表示关闭动态ip获取
+
+
+临时修改
+setenv bootargs noinitrd console=ttySAC0,115200 init=/init root=/dev/nfs rw nfsroot=192.168.1.105:/home/myroot/TQ210/rootfs ip=192.168.1.6:192.168.1.105:192.168.1.1:255.255.255.0::eth0:off
+
 
 
 
