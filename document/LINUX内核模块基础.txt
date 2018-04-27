@@ -1,0 +1,84 @@
+LINUX内核模块基础
+一、为什么需要内核模块？
+1.1 什么是内核模块
+Linux内核的整体结构非常庞大，其包含的组件也非常多，如何使用这些组件呢？ 
+方法1：把所有的组件都编译进内核文件，即：zImage或bzImage，但这样会导
+致一个问题：占用内存过多.有没有一种机制能让内核文件本身并不包含某组件，而
+是在该组件需要被使用的时候，动态地添加到正在运行的内核中呢？
+
+内核模块具有如下特点：
+• 模块本身并不被编译进内核文件(zImage或者bzImage)
+• 可以根据需求，在内核运行期间动态的安装或卸载。
+
+二、如何使用内核模块
+2.1 安装内核模块 insmod
+#insmod /home/dnw_usb.ko
+2.2 卸载内核模块 rmmod
+#rmmod dnw_usb
+2.3 查看内核模块 lsmod
+#lsmod
+
+三、内核模块设计
+3.1 范例代码分析
+#include <linux/init.h>
+#include <linux/module.h>
+static int hello_init(void)
+{
+	printk(KERN_WARNING"Hello, world !\n");
+	return 0;
+}
+static void hello_exit(void)
+{
+	printk(KERN_INFO "Goodbye,  world\n");
+}
+module_init(hello_init);
+module_exit(hello_exit);
+内核模块程序与应用程序的最大区别在于内核模块没有main函数。
+那内核模块程序的入口在哪儿呢?内核模块的入口由module_init宏来指明的，
+当insmod加载时调用module_init
+当rmmod卸载时执行module_exit
+
+3.2 思维导图设计,根据思维导图编写内核模块
+1）头文件：
+#include <linux/init.h>
+#include <linux/module.h>
+2）加载函数
+module_init
+3）卸载函数
+module_exit
+
+3.3 编写makefile，编译内核模块
+#vim Makefile
+obj-m := helloworld.o
+KDIR := /home/myroot/TQ210/kernel/linux  //内核代码路径
+
+all:
+	make -C $(KDIR) M=$(PWD) modules CROSS_COMPILE=arm-linux- ARCH=arm //M=$(PWD)：表示我的内核代码的路径，当然就是当前路径
+
+clean:
+	rm -rf *.o *.ko *.order 
+
+3.4 安装和卸载helloworld.ko
+1) insmod helloworld.ko
+# insmod helloworld.ko 
+Hello, world !
+
+2) rmmod helloworld
+# rmmod helloworld    
+报错：问题出在当去卸载一个模块的时候，在lib/modules目录下需要有与内核版本相同的目录，
+然而此处lib/modules下没有相应的目录
+rmmod: chdir(2.6.35.7-EmbedSky-g0382dcb-dirty): No such file or directory
+解决：手动创建与内核版本相同的目录
+#mkdir -p /lib/modules/$(uname -r)
+此处使用$(uname -r)就可获取到当前内核版本
+例：
+# mkdir -p lib/modules/$(uname -r) 
+# ls lib/modules/
+2.6.35.7-EmbedSky-g0382dcb-dirty  2.6.35.7-EmbedSky-g36ca11e
+
+# rmmod helloworld
+Goodbye,  world
+rmmod: module 'helloworld' not found
+
+成功
+
