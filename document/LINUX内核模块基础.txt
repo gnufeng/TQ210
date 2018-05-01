@@ -82,3 +82,159 @@ rmmod: module 'helloworld' not found
 
 成功
 
+四、内核模块可选信息
+4.1 模块申明
+1)MODULE_LICENSE（”遵守的协议”）
+申明该模块遵守的许可证协议，如："GPL"、"GPL v2"等
+
+2)MODULE_AUTHOR("作者")
+申明模块的作者
+3)MODULE_DESCRIPTION("模块的功能描述")
+申明模块的功能
+
+4)MODULE_VERSION("V1.0")
+申明模块的版本
+
+例：添加内核模块申明实例
+#include <linux/init.h>
+#include <linux/module.h>
+MODULE_LICENSE("GPL")
+static int hello_init(void)
+{
+	printk(KERN_WARNING"Hello, world !\n");
+	return 0;
+}
+static void hello_exit(void)
+{
+	printk(KERN_INFO "Goodbye,  world\n");
+}
+module_init(hello_init);
+module_exit(hello_exit);
+
+4.2 模块参数
+在应用程序中int main(int argc, char** argv)
+argc表示命令行输入的参数个数,argv中保存输入的参数
+
+1)那么内核模块中可以通过命令行输入参数么？
+答案：可以
+2)参数怎么传入，传入后保存在哪里？
+通过宏module_param指定保存模块参数的变量。模块参数
+用于在加载模块时传递参数给模块。
+module_param(name,type,perm)
+name:变量的名称
+type:变量类型，bool:布尔型 int:整型 charp:字符串型
+perm是访问权限。 S_IRUGO:读权限 S_IWUSR:写权限
+例:
+int a = 3;
+char *st;
+module_param(a,int, S_IRUGO);
+module_param(st,charp, S_IRUGO);
+
+例：使用模块参数:
+#include <linux/init.h>
+#include <linux/module.h>
+MODULE_LICENSE("GPL")
+int a = 3;
+static int hello_init(void)
+{
+	printk(KERN_WARNING"Hello, world !\n");
+	printk("a=%d\n",a);
+	return 0;
+}
+static void hello_exit(void)
+{
+	printk(KERN_INFO "Goodbye,  world\n");
+}
+module_init(hello_init);
+module_exit(hello_exit);
+启动开发板：
+# insmod helloworld.ko 
+Hello, world !
+a=3
+但是做insmod helloworld.ko a=10操作时报错，原因是没有将a申明为模块参数，此时a就是普通全局变量。
+# insmod helloworld.ko a=10
+helloworld: Unknown parameter 'a'
+insmod: cannot insert 'helloworld.ko': unknown symbol in module or invalid parameter
+
+做如下修改：添加module_param(a,int,S_IRUGO|S_IWUSR)
+#include <linux/init.h>
+#include <linux/module.h>
+MODULE_LICENSE("GPL")
+int a = 3;
+module_param(a,int,S_IRUGO|S_IWUSR);
+static int hello_init(void)
+{
+	printk(KERN_WARNING"Hello, world !\n");
+	printk("a=%d\n",a);
+	return 0;
+}
+static void hello_exit(void)
+{
+	printk(KERN_INFO "Goodbye,  world\n");
+}
+module_init(hello_init);
+module_exit(hello_exit);
+再次做如下操作：就可以正确得到内核模块参数了，此时a就被申明为模块参数了
+# insmod helloworld.ko a=10
+Hello, world !
+a=10
+
+例：
+#include <linux/init.h>
+#include <linux/module.h>
+MODULE_LICENSE("GPL")
+int a = 3;
+char *p;//注意不要给变量赋初值
+module_param(a,int,S_IRUGO|S_IWUSR);
+module_param(p,charp,S_IRUGO|S_IWUSR);
+static int hello_init(void)
+{
+	printk(KERN_WARNING"Hello, world !\n");
+	printk("a=%d\n",a);
+	printk("p=%s\n",p);
+	return 0;
+}
+static void hello_exit(void)
+{
+	printk(KERN_INFO "Goodbye,  world\n");
+}
+module_init(hello_init);
+module_exit(hello_exit);
+
+# insmod helloworld.ko p=abcd
+Hello, world !
+a=3
+p=abcd
+# insmod helloworld.ko a=10 p=abcd
+Hello, world !
+a=10
+p=abcd
+可见字符参数也能正常使用
+
+4.3 符号输出
+什么是内核符号？
+为什么要导出模块中的内核符号？
+
+内核符号的导出使用宏
+EXPORT_SYMBOL(符号名)
+EXPORT_SYMBOL_GPL(符号名)
+说明：
+其中EXPORT_SYMBOL_GPL只能用于包含GPL许可证的模块。
+
+实例：导出内核符号
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
