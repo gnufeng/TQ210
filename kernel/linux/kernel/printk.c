@@ -1439,6 +1439,11 @@ int unregister_console(struct console *console)
 	return res;
 }
 EXPORT_SYMBOL(unregister_console);
+/*add syscall func body sys_pk,execute printk info*/
+void sys_pk()
+{
+	printk("This is a new sys call!\n");
+}
 
 static int __init disable_boot_consoles(void)
 {
