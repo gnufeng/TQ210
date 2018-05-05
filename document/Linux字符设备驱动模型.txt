@@ -305,3 +305,139 @@ dev_t i_rdev：设备号
 	当我们从内核中卸载驱动程序的时候，需要使用cdev_del函数来完成字符设备的注销。
 
 3 范例驱动分析
+3.1 应用程序->访问->驱动程序
+例：以read为例：
+分析：当应用程序使用read系统调用的时候，那么它是通过什么路径来调用内核驱动程序的xxx_read实现代码。
+#include<stdio.h>
+#include<sys/types.h>
+#include<sys/stat.h>
+#include<fcntl.h>
+int main()
+{
+     int fd = 0;
+     int dst = 0;
+     fd = open("/dev/memdev0",O_RDWR);   //打开文件，权限可读可写
+     read(fd,&dst,sizeof(int));          //使用内核调用read函数
+	 printf("dst is %d\n",dst);
+     close(fd);
+
+     return 0;
+}
+
+对他进行编译：
+#arm-linux-gcc -static -g read_mem.c -o read_mem
+在进行反汇编：
+#arm-linux-objdump -D -S read_mem > read_mem_dump //找到main函数
+#include<sys/types.h>
+#include<sys/stat.h>
+#include<fcntl.h>
+
+int main()
+{
+    8228:	e92d4800 	push	{fp, lr}
+    822c:	e28db004 	add	fp, sp, #4	; 0x4
+    8230:	e24dd008 	sub	sp, sp, #8	; 0x8
+     int fd = 0;
+    8234:	e3a03000 	mov	r3, #0	; 0x0
+    8238:	e50b3008 	str	r3, [fp, #-8]
+     int dst = 0;
+    823c:	e3a03000 	mov	r3, #0	; 0x0
+    8240:	e50b300c 	str	r3, [fp, #-12]
+     fd = open("/dev/memdev0",O_RDWR);   //打开文件，权限可读可写
+    8244:	e59f004c 	ldr	r0, [pc, #76]	; 8298 <main+0x70>
+    8248:	e3a01002 	mov	r1, #2	; 0x2
+    824c:	eb0028a3 	bl	124e0 <__libc_open>
+    8250:	e1a03000 	mov	r3, r0
+    8254:	e50b3008 	str	r3, [fp, #-8]
+     read(fd,&dst,sizeof(int));          //
+    8258:	e24b300c 	sub	r3, fp, #12	; 0xc
+    825c:	e51b0008 	ldr	r0, [fp, #-8]
+    8260:	e1a01003 	mov	r1, r3
+    8264:	e3a02004 	mov	r2, #4	; 0x4
+    8268:	eb0028e4 	bl	12600 <__libc_read>	//吧参数准备好之后去调用__libc_read
+	 printf("dst is %d\n",dst);
+    826c:	e51b300c 	ldr	r3, [fp, #-12]
+    8270:	e59f0024 	ldr	r0, [pc, #36]	; 829c <main+0x74>
+    8274:	e1a01003 	mov	r1, r3
+    8278:	eb000364 	bl	9010 <_IO_printf>
+     close(fd);
+    827c:	e51b0008 	ldr	r0, [fp, #-8]
+    8280:	eb0028ba 	bl	12570 <__libc_close>
+
+     return 0;
+    8284:	e3a03000 	mov	r3, #0	; 0x0
+}
+
+
+00012600 <__libc_read>:
+   ....................................
+   12614:	e3a07003 	mov	r7, #3	; 0x3
+   12618:	ef000000 	svc	0x00000000
+   ....................................
+应用程序使用read系统调用，先把3传给r7中，在执行svc指令。
+Q1：那么svc指令到底会对系统产生什么影响？
+答：svc是系统调用指令(特殊指令)，当在应用程序中使用这个指令之后，pc指针会从用户空间进入到内核空间。
+而且入口是固定的，然后内核会去取这个number 3,那么3代表什么意思呢？表明的是这次希望调用的是read代码。
+
+依据no=3去系统调用表查表。
+
+Q2：那么Q1中所说的固定入口在什么地方？
+答：在entry-common.S (z:\tq210\kernel\linux\arch\arm\kernel)文件中的
+ENTRY(vector_swi)标号处。
+
+3.2 应用程序->访问->驱动程序步骤：
+1) 先将3传给r7，然后执行svc系统调用指令，将pc指针从用户空间转入到内核空间,知道内核固定入口ENTRY(vector_swi)。
+2) 取系统调用编号:addne	scno, r7, #__NR_SYSCALL_BASE	@ put OS number in
+3) 根据系统调用编号去查表，那么表在什么地方？
+找到如下代码：sys_call_table系统调用表。
+adr	tbl, sys_call_table		@ load syscall table pointer
+
+就在entry-common.S (z:\tq210\kernel\linux\arch\arm\kernel)文件中
+ENTRY(sys_call_table)
+#include "calls.S"
+
+calls.S就是包含很多函数的表，然后根据系统调用编号从这张表中找到对应的函数。
+
+4) 根据反汇编知道传进来的系统调用编号3找到sys_read函数。
+那么从应用程序read找到内核sys_read到此分析完成。
+
+5) 接下来在分析sys_read是怎么实现的？
+于是在
+Syscalls.h (z:\tq210\kernel\linux\include\linux)找到
+#define SYSCALL_DEFINE1(name, ...) SYSCALL_DEFINEx(1, _##name, __VA_ARGS__)
+#define SYSCALL_DEFINE2(name, ...) SYSCALL_DEFINEx(2, _##name, __VA_ARGS__)
+#define SYSCALL_DEFINE3(name, ...) SYSCALL_DEFINEx(3, _##name, __VA_ARGS__)
+#define SYSCALL_DEFINE4(name, ...) SYSCALL_DEFINEx(4, _##name, __VA_ARGS__)
+#define SYSCALL_DEFINE5(name, ...) SYSCALL_DEFINEx(5, _##name, __VA_ARGS__)
+#define SYSCALL_DEFINE6(name, ...) SYSCALL_DEFINEx(6, _##name, __VA_ARGS__)
+read_write.c (z:\tq210\kernel\linux\fs)
+找到：
+SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)
+{
+	struct file *file;
+	ssize_t ret = -EBADF;
+	int fput_needed;
+
+	file = fget_light(fd, &fput_needed);
+	if (file) {
+		loff_t pos = file_pos_read(file);
+		ret = vfs_read(file, buf, count, &pos);
+		file_pos_write(file, pos);
+		fput_light(file, fput_needed);
+	}
+
+	return ret;
+}
+
+接下来在看vfs_read函数。
+read_write.c (z:\tq210\kernel\linux\fs)
+ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
+{
+	.......
+	ret = file->f_op->read(file, buf, count, pos);
+	.......
+}
+最终驱动read函数就是在这里实现的。
+
+
+
