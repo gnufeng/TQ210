@@ -1,0 +1,133 @@
+一、使用字符设备驱动
+1 编译/安装驱动
+	在Linux系统中，驱动程序通常采用内核模块的程序结构来进行编码。因此，编译/安装一个驱
+动程序，其实质就是编译/安装一个内核模块。
+
+编译/安装字符设备驱动程序:
+1.1 创建如下目录
+Z:\TQ210\mytest_modules\mychar_dev\memory_dev\driver
+1.2 编写memdev.c驱动程序和Makefile文件
+1.3 编译/安装
+#cp memdev.ko  ../../../../rootfs/
+启动开发板，挂在跟文件系统
+#insmod memdev.ko
+
+2 创建设备文件
+2.1 字符设备访问流程
+①应用程序通过文件名找到字符设备文件，应用程序读写字符设备实质就是操作字符设备文件。
+②字符设备文件在根据主设备号找到设备驱动程序，通过主设备号来关联字符设备文件和设备驱动程序。
+
+	通过字符设备文件，应用程序可以使用相应的字符设备驱动程序来控制字符设备。
+创建字符设备文件的方法一般有两种：
+1) 使用mknod命令
+mknod /dev/文件名 c 主设备号 次设备号(非负0-255)
+
+Q1：怎么知道什么字符设备文件对应什么主设备号？
+# cat /proc/devices
+Character devices:
+  1 mem
+252 memdev
+就可以查到对应的主设备号
+
+创建字符设备文件步骤:
+①：在开发板中用mknod创建一个设备文件：
+#mknod /dev/memdev0 c 252 0
+# ls /dev/memdev0 
+/dev/memdev0	//在/dev/memdev0下确实有自己创建的字符设备文件
+
+2) 使用函数在驱动程序中创建（后续课程介绍）
+
+创建字符设备文件:
+
+3 访问设备
+编写应用程序访问字符设备:
+3.1 编写一个应用程序，路径：Z:\TQ210\mytest_modules\mychar_dev\memory_dev\app
+#vim write.c 
+#include<stdio.h>
+#include<sys/types.h>
+#include<sys/stat.h>
+#include<fcntl.h>
+ 
+int main()
+{
+    int fd = 0;
+	int src = 2018;
+	
+	/*打开设备文件*/
+	fd = open("/dev/memdev0",O_RDWR);
+	
+	/*写入数据*/
+	write(fd, &src, sizeof(int));
+	
+	/*关闭设备*/
+	close(fd);
+	
+	return 0;	
+}
+
+#cp write_mem ../../../../rootfs/
+在开发板执行write_mem
+# ./write_mem 报错如下,意思是应用程序所依赖的库找不到
+-/bin/sh: ./write_mem: not found
+
+可以用以下方法分析类似上述报错：
+使用arm-linux-readelf -d write_mem指令来检查应用程序 -d是用来查询所依赖的动态链接库的。
+#arm-linux-readelf -d write_mem 
+Dynamic section at offset 0x4f0 contains 24 entries:
+  Tag        Type                         Name/Value
+ 0x00000001 (NEEDED)                     Shared library: [libc.so.6]	//需要用到[libc.so.6]库
+ 0x0000000c (INIT)                       0x82bc
+ 0x0000000d (FINI)                       0x84b8
+ 0x00000019 (INIT_ARRAY)                 0x104e4
+ 0x0000001b (INIT_ARRAYSZ)               4 (bytes)
+ 0x0000001a (FINI_ARRAY)                 0x104e8
+ 0x0000001c (FINI_ARRAYSZ)               4 (bytes)
+ 0x00000004 (HASH)                       0x8168
+ 0x00000005 (STRTAB)                     0x8208
+ 0x00000006 (SYMTAB)                     0x8198
+ 0x0000000a (STRSZ)                      77 (bytes)
+ 0x0000000b (SYMENT)                     16 (bytes)
+ 0x00000015 (DEBUG)                      0x0
+ 0x00000003 (PLTGOT)                     0x105d8
+ 0x00000002 (PLTRELSZ)                   48 (bytes)
+ 0x00000014 (PLTREL)                     REL
+ 0x00000017 (JMPREL)                     0x828c
+ 0x00000011 (REL)                        0x8284
+ 0x00000012 (RELSZ)                      8 (bytes)
+ 0x00000013 (RELENT)                     8 (bytes)
+ 0x6ffffffe (VERNEED)                    0x8264
+ 0x6fffffff (VERNEEDNUM)                 1
+ 0x6ffffff0 (VERSYM)                     0x8256
+ 0x00000000 (NULL)                       0x0
+ 
+但是在开发板中的/lib/目录下没有相应的库
+# ls /lib/
+modules
+解决方法：使用静态编译或者找到相应的库拷贝到开发板/lib/目录下
+
+③：编写一个应用程序，路径：Z:\TQ210\mytest_modules\mychar_dev\memory_dev\app
+#vim read_mem.c 
+#include<stdio.h>
+#include<sys/types.h>
+#include<sys/stat.h>
+#include<fcntl.h>
+
+int main()
+{
+    int fd = 0;
+	int dst = 0;
+	
+	/*打开设备文件*/
+	fd = open("/dev/memdev0",O_RDWR);
+	
+	/*写入数据*/
+	read(fd, &dst, sizeof(int));
+	
+	printf("dst is %d\n",dst);
+	
+	/*关闭设备*/
+	close(fd);
+	
+	return 0;	
+}
+
