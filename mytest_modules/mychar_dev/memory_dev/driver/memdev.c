@@ -5,8 +5,8 @@
 #include <asm/uaccess.h>
 
 
-int dev1_registers[5];
-int dev2_registers[5];
+int dev1_registers[5];	//模拟设备1
+int dev2_registers[5];	//模拟设备2
 
 struct cdev cdev; 
 dev_t devno;
@@ -15,7 +15,7 @@ dev_t devno;
 int mem_open(struct inode *inode, struct file *filp)
 {
     
-    /*获取次设备号*/
+    /*获取次设备号，通过次设备号区分在操作的是哪一个设备*/
     int num = MINOR(inode->i_rdev);
     
     if (num==0)
@@ -31,7 +31,8 @@ int mem_open(struct inode *inode, struct file *filp)
 /*文件释放函数*/
 int mem_release(struct inode *inode, struct file *filp)
 {
-  return 0;
+	//此处不是对真实的硬件操作，关闭设备时无事可做，直接返回
+	return 0;
 }
 
 /*读函数*/
@@ -88,7 +89,7 @@ static ssize_t mem_write(struct file *filp, const char __user *buf, size_t size,
   return ret;
 }
 
-/* seek文件定位函数 */
+/* seek文件定位函数 whence表示起始位置*/
 static loff_t mem_llseek(struct file *filp, loff_t offset, int whence)
 { 
     loff_t newpos;
@@ -134,6 +135,9 @@ static int memdev_init(void)
   cdev_init(&cdev, &mem_fops);
   
   /* 注册字符设备 */
+  /* 实际分配出来的是设备号，包括主设备号和次设备号，主设备号可以分配好，但次设备号需要指定，第二个
+  参数表示起始次设备号是0，第三个参数表示需要分配多少个次设备号，第四个参数表示哪一个设备在分配，就是
+  驱动的名字 */
   alloc_chrdev_region(&devno, 0, 2, "memdev");
   cdev_add(&cdev, devno, 2);
 }
