@@ -30,9 +30,9 @@ Direction：参数传送的方向，可能的值是 _IOC_NONE(没有数据传输
 Size： 参数长度
 
 Linux系统提供了下面的宏来帮助定义命令:
-_IO(type,nr)：不带参数的命令
-_IOR(type,nr,datatype)：从设备中读参数的命令
-_IOW(type,nr,datatype)：向设备写入参数的命令
+_IO(type,nr)：不带参数的命令 nr 表示命令序号
+_IOR(type,nr,datatype)：从设备中读参数的命令 nr 表示命令序号
+_IOW(type,nr,datatype)：向设备写入参数的命令 nr 表示命令序号
 
 例：
 #define MEM_MAGIC 'm' //定义幻数
@@ -51,14 +51,85 @@ Default:
 // return -EINVAL
 
 3 自己动手写驱动程序
+实现两个功能：
+3.1 通过命令重启设备。
+3.2 通过命令给设备设置参数。
+Z:\TQ210\mytest_modules\mychar_dev\memory_dev\driver
+① 在该路径下创建memdev.h
+#touch memdev.h
+#define MEM_MAGIC 'm' //定义幻数
+#define MEM_RESTART _IO(MEM_MAGIC,0)	//重启
+#define MEM_SET 	_IOW(MEM_MAGIC,1,int)	//设置参数
+
+② 在memdev.c中添加mem_ioctl函数实现
+long mem_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
+{
+	switch(cmd)
+	{
+		case MEM_RESTART:
+			printk("restart device\n");
+			break;
+		case MEM_SET:
+			printk("set arg is %d\n",arg);
+			break;
+		default:
+			return -EINVAL;
+	}
+	return 0;
+}
+//初始化结构指针
+static const struct file_operations mem_fops =
+{
+  .unlocked_ioctl = mem_ioctl,
+};
 
 
+③ 编译驱动
+#make
+拷贝memdev到rootfs目录下
+④ 编译应用程序
+Z:\TQ210\mytest_modules\mychar_dev\memory_dev\app
+#vim mem_ioctl.c
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
 
+#include "../driver/memdev.h"
+int main()
+{
+	int fd = 0;
 
+	fd = open("/dev/memdev0",O_RDWR);
+	ioctl(fd,MEM_SET,115200);
 
+	ioctl(fd,MEM_RESTART);
+	close(fd);
 
+	return 0;
+}
 
+⑤ 编译应用程序
+#arm-linux-gcc -static mem_ioctl.c -o mem_ioctl
+拷贝mem_ioctl到rootfs目录下
+
+⑥ 安装驱动
+#insmod memdev
+
+⑦ 查设备主设备号
+#cat /proc/devices
+252 memdev
+
+⑧ 创建设备文件
+#mknod /dev/memdev0 c 252 0
+
+⑨ 运行应用程序
+# ./mem_ioctl 
+set arg is 115200
+restart device
+
+------end of-------
 
 
 

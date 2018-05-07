@@ -3,7 +3,7 @@
 #include <linux/init.h>
 #include <linux/cdev.h>
 #include <asm/uaccess.h>
-
+#include "memdev.h"
 
 int dev1_registers[5];	//模拟设备1
 int dev2_registers[5];	//模拟设备2
@@ -118,6 +118,23 @@ static loff_t mem_llseek(struct file *filp, loff_t offset, int whence)
 
 }
 
+long mem_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
+{
+	switch(cmd)
+	{
+		case MEM_RESTART:
+			printk("restart device\n");
+			break;
+		case MEM_SET:
+			printk("set arg is %d\n",arg);
+			break;
+		default:
+			return -EINVAL;
+	}
+	return 0;
+}
+
+
 /*文件操作结构体*/
 static const struct file_operations mem_fops =
 {
@@ -126,7 +143,9 @@ static const struct file_operations mem_fops =
   .write = mem_write,
   .open = mem_open,
   .release = mem_release,
+  .unlocked_ioctl = mem_ioctl,
 };
+
 
 /*设备驱动模块加载函数*/
 static int memdev_init(void)
