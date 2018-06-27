@@ -1,4 +1,4 @@
-ï»¿#include <linux/miscdevice.h>
+#include <linux/miscdevice.h>
 #include <linux/input.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
@@ -14,22 +14,21 @@
 #include <plat/gpio-cfg-helpers.h>
 
 
-
 #define DEVICE_NAME "led"
 
 
-/* åº”ç”¨ç¨‹åºæ‰§è¡Œioctl(fd, cmd, arg)æ—¶çš„ç¬¬2ä¸ªå‚æ•° */
+/* Ó¦ÓÃ³ÌĞòÖ´ĞĞioctl(fd, cmd, arg)Ê±µÄµÚ2¸ö²ÎÊı */
 #define IOCTL_GPIO_ON	1
 #define IOCTL_GPIO_OFF	0
 
-/* ç”¨æ¥æŒ‡å®šLEDæ‰€ç”¨çš„GPIOå¼•è„š */
+/* ÓÃÀ´Ö¸¶¨LEDËùÓÃµÄGPIOÒı½Å */
 static unsigned long gpio_table [] =
 {
 	S5PV210_GPC0(3),
 	S5PV210_GPC0(4),
 };
 
-/* ç”¨æ¥æŒ‡å®šGPIOå¼•è„šçš„åŠŸèƒ½ï¼šè¾“å‡º */
+/* ÓÃÀ´Ö¸¶¨GPIOÒı½ÅµÄ¹¦ÄÜ£ºÊä³ö */
 static unsigned int gpio_cfg_table [] =
 {
 	S3C_GPIO_SFN(1),
@@ -52,8 +51,9 @@ static void toggle_led(unsigned int cmd,unsigned long arg)
 	int loop=0;
 	printk("%s : led %ld toggle now: \n",__func__,arg);
 	for(;loop<11;loop++)
-	{	cmd = loop%2;
-		printk("leds %d %s \n",arg+1,(cmd)?"on":"o   ff");
+	{
+		cmd = loop%2;
+		printk("leds %d %s \n",arg+1,(cmd)?"on":"off");
 		tq210_debug_leds(cmd,arg);
 		mdelay(1000);
 	}
@@ -62,7 +62,7 @@ static void toggle_led(unsigned int cmd,unsigned long arg)
 #endif
 
 /**
-*å‡½æ•°åŠŸèƒ½ï¼šæ‰“å¼€/dev/ledè®¾å¤‡ï¼Œè®¾å¤‡åæ˜¯ï¼š/dev/led
+*º¯Êı¹¦ÄÜ£º´ò¿ª/dev/ledÉè±¸£¬Éè±¸ÃûÊÇ£º/dev/led
 **/
 static int tq210_gpio_open(struct inode *inode, struct file *file)
 {
@@ -72,13 +72,13 @@ static int tq210_gpio_open(struct inode *inode, struct file *file)
 	if(err)
 	{
 		printk(KERN_ERR "failed to request GPC0_3 for LVDS PWDN pin\n");
-        return err;
+		return err;
 	}
 	err = gpio_request(gpio_table[1], "GPC0_4");
 	if(err)
 	{
 		printk(KERN_ERR "failed to request GPC0_4 for LVDS PWDN pin\n");
-        return err;
+		return err;
 	}
 	printk(KERN_INFO " leds opened\n");
 	for (i = 0; i < sizeof(gpio_table)/sizeof(unsigned long); i++)
@@ -98,8 +98,8 @@ static int tq210_gpio_open(struct inode *inode, struct file *file)
 }
 
 /**
-*å‡½æ•°åŠŸèƒ½ï¼šç”¨äºæ§åˆ¶ledçš„äº®ç­ 
-*æ§åˆ¶å­—ä¸ºcmdï¼Œargä¸ºæ§åˆ¶å“ªä¸ªç¯çš„äº®ç­å–å€¼èŒƒå›´ä¸º0-1ï¼šcmdä¸ºIOCTL_GPIO_ONæ—¶äº®ï¼Œcmdä¸ºIOCTL_GPIO_OFFä¸ºç­
+*º¯Êı¹¦ÄÜ£ºÓÃÓÚ¿ØÖÆledµÄÁÁÃğ 
+*¿ØÖÆ×ÖÎªcmd£¬argÎª¿ØÖÆÄÄ¸öµÆµÄÁÁÃğÈ¡Öµ·¶Î§Îª0-1£ºcmdÎªIOCTL_GPIO_ONÊ±ÁÁ£¬cmdÎªIOCTL_GPIO_OFFÎªÃğ
 **/
 static long tq210_gpio_ioctl(
 	struct inode *inode,
@@ -116,13 +116,13 @@ static long tq210_gpio_ioctl(
 	switch(cmd)
 	{
 		case IOCTL_GPIO_ON:
-			// è®¾ç½®æŒ‡å®šå¼•è„šçš„è¾“å‡ºç”µå¹³ä¸º1
+			// ÉèÖÃÖ¸¶¨Òı½ÅµÄÊä³öµçÆ½Îª1
 			gpio_direction_output(gpio_table[arg], 1);
 			//s3c_gpio_setpin(gpio_table[arg], 1);
 			return 0;
 
 		case IOCTL_GPIO_OFF:
-			// è®¾ç½®æŒ‡å®šå¼•è„šçš„è¾“å‡ºç”µå¹³ä¸º0
+			// ÉèÖÃÖ¸¶¨Òı½ÅµÄÊä³öµçÆ½Îª0
 			gpio_direction_output(gpio_table[arg], 0);
 			//s3c_gpio_setpin(gpio_table[arg], 0);
 			return 0;
@@ -140,32 +140,32 @@ static int tq210_gpio_close(struct inode *inode, struct file *file)
 	return 0;
 }
 
-/*é©±åŠ¨æ¥å£è®¾ç½®*/
+/*Çı¶¯½Ó¿ÚÉèÖÃ*/
 static struct file_operations dev_fops = {
 	.owner	=	THIS_MODULE,
 	.ioctl	=	tq210_gpio_ioctl,
 	.open = tq210_gpio_open,
 	.release = tq210_gpio_close,
 };
-/*è®¾å¤‡ç»“æ„çš„è®¾ç½®*/
+/*Éè±¸½á¹¹µÄÉèÖÃ*/
 static struct miscdevice misc = {
 	.minor = MISC_DYNAMIC_MINOR,
 	.name = DEVICE_NAME,
 	.fops = &dev_fops,
 };
-/*åˆå§‹åŒ–è®¾å¤‡ï¼Œé…ç½®å¯¹åº”çš„IOï¼Œä»¥åŠæ³¨å†Œè®¾å¤‡*/
+/*³õÊ¼»¯Éè±¸£¬ÅäÖÃ¶ÔÓ¦µÄIO£¬ÒÔ¼°×¢²áÉè±¸*/
 static int __init dev_init(void)
 {
 	int ret;
 
 	int i;
 	int err;
-	#ifdef CONFIG_TQ210_DEBUG_LEDS
+#ifdef CONFIG_TQ210_DEBUG_LEDS
 	err = gpio_request(gpio_table[0], "GPC0_3");
 	if(err)
 	{
 		printk(KERN_ERR "failed to request GPC0_3 for LVDS PWDN pin\n");
-        return err;
+		return err;
 	}
 	err = gpio_request(gpio_table[1], "GPC0_4");
 	if(err)
@@ -176,27 +176,27 @@ static int __init dev_init(void)
 	for (i = 0; i < sizeof(gpio_table)/sizeof(unsigned long); i++)
 	{
 		//gpio_request(gpio_table[0],gpio_name[i]);
-		s3c_gpio_cfgpin(gpio_table[i], gpio_cfg_table[i]);//é…ç½®ç®¡è„šä¸ºè¾“å‡º
+		s3c_gpio_cfgpin(gpio_table[i], gpio_cfg_table[i]);//ÅäÖÃ¹Ü½ÅÎªÊä³ö
 		gpio_direction_output(gpio_table[i], 0);
-		//s3c_gpio_setpin(gpio_table[i], 0);//è®¾ç½®ç®¡è„šä¸ºä½ç”µå¹³
+		//s3c_gpio_setpin(gpio_table[i], 0);//ÉèÖÃ¹Ü½ÅÎªµÍµçÆ½
 		s3c_gpio_setpull(gpio_table[i], S3C_GPIO_PULL_NONE);
 	}
-	#endif
+#endif
 
 	ret = misc_register(&misc);
 
 	printk(KERN_INFO "TQ210 LEDs driver successfully probed\n");
 	
-	#ifdef CONFIG_TQ210_DEBUG_LEDS
+#ifdef CONFIG_TQ210_DEBUG_LEDS
 	for (i = 0; i < sizeof(gpio_table)/sizeof(unsigned long); i++)
 	{
 		toggle_led(1,i);
 	}
-	#endif
+#endif
 
 	return ret;
 }
-/*æ³¨é”€è®¾å¤‡*/
+/*×¢ÏúÉè±¸*/
 static void __exit dev_exit(void)
 {
 	misc_deregister(&misc);

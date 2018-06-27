@@ -30,8 +30,7 @@ int s3c_gpio_cfgpin(unsigned int pin, unsigned int config)
 
 	if (!chip)
 		return -EINVAL;
-
-	offset = pin - chip->chip.base;
+	offset = pin - chip->chip.base; //pin num-pin gpio base eg:gpd1=41-40=1
 
 	s3c_gpio_lock(chip, flags);
 	ret = s3c_gpio_do_setcfg(chip, offset, config);
@@ -228,7 +227,6 @@ int s3c_gpio_setpull_updown(struct s3c_gpio_chip *chip,
 	void __iomem *reg = chip->base + 0x08;
 	int shift = off * 2;
 	u32 pup;
-
 	pup = __raw_readl(reg);
 	pup &= ~(3 << shift);
 	pup |= pull << shift;
